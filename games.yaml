@@ -13,7 +13,7 @@ settings:
 app:
   auto_start: false
   auto_execute: false
-  theme: dark
+  theme: light
   minimize_to_tray: true
   log_level: INFO
 pairs:
@@ -69,3 +69,16 @@ pairs:
     name: ok-nte
     wait_after_launch: 10
     completion_timeout: 600
+- name: 尘白禁区
+  game:
+    executable: E:/Snow/data/game/Game/Binaries/Win64/Game.exe
+    auto_start: true
+  tool:
+    executable: ''
+    working_dir: ''
+    cli_args: ''
+    wait_for_exit: true
+    timeout: 1800
+    process_name: ''
+  launcher:
+    executable: E:/Snow/snow_launcher.exe
