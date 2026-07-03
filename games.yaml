@@ -1,0 +1,71 @@
+settings:
+  screenshot_region: null
+  default_wait_after_launch: 30
+  log_dir: logs
+  image_dir: images
+  confidence: 0.8
+  retry:
+    max_attempts: 3
+    interval: 5
+  cleanup:
+    force_close: true
+    timeout: 30
+app:
+  auto_start: false
+  auto_execute: false
+  theme: dark
+  minimize_to_tray: true
+  log_level: INFO
+pairs:
+- name: 鸣潮
+  game:
+    executable: E:/WeGameApps/rail_apps/Wuthering Waves(2002137)/Wuthering Waves.exe
+    auto_start: false
+    working_dir: E:/WeGameApps/rail_apps/Wuthering Waves(2002137)
+    wait_after_launch: 30
+  launcher:
+    executable: C:/Program Files (x86)/WeGame/WeGame.exe
+    args: ''
+  tool:
+    executable: E:/ElectronicGame/ok-ww/ok-ww.exe
+    working_dir: E:/ElectronicGame/ok-ww
+    cli_args: -t 1 -e
+    wait_for_exit: true
+    timeout: 1800
+    name: ok-ww
+    wait_after_launch: 10
+    completion_timeout: 600
+- name: 绝区零
+  game:
+    executable: D:/ElectronicGames/ZenlessZoneZero Game/ZenlessZoneZero.exe
+    auto_start: false
+    working_dir: D:/ElectronicGames/ZenlessZoneZero Game
+    wait_after_launch: 30
+  tool:
+    executable: E:/ElectronicGame/ZZZOneDragon/OneDragon-Launcher.exe
+    working_dir: E:/ElectronicGame/ZZZOneDragon
+    cli_args: -o -c
+    wait_for_exit: true
+    timeout: 1800
+    use_gui_click: false
+    show_window: true
+    name: OneDragon
+    wait_after_launch: 10
+    completion_timeout: 600
+- name: 异环
+  game:
+    executable: E:/ElectronicGame/Yihuan/Neverness To Everness/Client/WindowsNoEditor/HT/Binaries/Win64/HTGame.exe
+    process_name: HTGame
+    auto_start: false
+    working_dir: E:/ElectronicGame/Yihuan/Neverness To Everness/Client/WindowsNoEditor/HT/Binaries/Win64
+    wait_after_launch: 30
+  tool:
+    executable: E:/ElectronicGame/ok-nte/ok-nte.exe
+    working_dir: E:/ElectronicGame/ok-nte
+    cli_args: -t 2 -e
+    wait_for_exit: true
+    timeout: 1800
+    process_name: ok-nte
+    name: ok-nte
+    wait_after_launch: 10
+    completion_timeout: 600

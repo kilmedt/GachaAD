@@ -1,0 +1,596 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #f5f5f5;
+    --bg-light: #e8eaed;
+    --bg-card: #ffffff;
+    --bg-selected: #e8f0fe;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-dark: #1e40af;
+    --green: #16a34a;
+    --red: #dc2626;
+    --yellow: #d97706;
+    --text: #1f2937;
+    --text-dim: #6b7280;
+    --border: #e5e7eb;
+    --selected-border: #2563eb;
+    --btn-start: #2563eb;
+    --btn-stop: #dc2626;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+[data-theme="dark"] {
+    --bg: #1e1e2e;
+    --bg-light: #2a2a3e;
+    --bg-card: #313145;
+    --bg-selected: #3b4261;
+    --accent: #89b4fa;
+    --accent-hover: #74c7ec;
+    --accent-dark: #454d8a;
+    --green: #a6e3a1;
+    --red: #f38ba8;
+    --yellow: #f9e2af;
+    --text: #cdd6f4;
+    --text-dim: #6c7086;
+    --border: #45475a;
+    --selected-border: #89b4fa;
+    --btn-start: #89b4fa;
+    --btn-stop: #f38ba8;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 2px;
+    padding: 10px 16px 0;
+    background: var(--bg);
+}
+
+.tab {
+    padding: 8px 20px;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--bg-card);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    transition: all 0.2s;
+}
+
+.tab:hover {
+    color: var(--text);
+}
+
+.tab.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+}
+
+.tab-content {
+    flex: 1;
+    display: none;
+    overflow: hidden;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+/* Bottom bar */
+.bottom-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+}
+
+.btn {
+    padding: 8px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-start {
+    background: var(--btn-start);
+    color: #ffffff;
+}
+
+.btn-start:hover {
+    background: var(--accent-hover);
+}
+
+.btn-start:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-stop {
+    background: var(--btn-stop);
+    color: #ffffff;
+}
+
+.btn-stop:hover {
+    opacity: 0.85;
+}
+
+.btn-stop:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.status-text {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+/* Execute tab */
+#tab-run {
+    flex-direction: row;
+}
+
+.run-left {
+    width: 320px;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+}
+
+.run-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+}
+
+/* Section header */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.section-header .actions {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-sm {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-card);
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.btn-sm:hover {
+    background: var(--bg-selected);
+}
+
+/* Game list */
+.game-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 10px 10px;
+}
+
+.game-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: var(--bg-card);
+    cursor: grab;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.15s ease, background 0.15s ease, opacity 0.2s ease;
+    user-select: none;
+}
+
+.game-item:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow);
+}
+
+.game-item.selected {
+    border-color: var(--selected-border);
+    background: var(--bg-selected);
+}
+
+.game-item:active {
+    cursor: grabbing;
+}
+
+/* 拖拽中的源卡片 */
+.game-item.dragging {
+    opacity: 0.35;
+    transform: scale(0.97);
+    border-style: dashed;
+}
+
+/* 拖拽目标上方 */
+.game-item.drag-over-top {
+    border-top: 3px solid var(--accent);
+}
+
+/* 拖拽目标下方 */
+.game-item.drag-over-bottom {
+    border-bottom: 3px solid var(--accent);
+}
+
+/* 拖入目标指示线 */
+.drag-indicator {
+    height: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+    margin: 2px 0;
+    animation: pulse-line 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-line {
+    from { opacity: 0.6; transform: scaleX(0.95); }
+    to { opacity: 1; transform: scaleX(1); }
+}
+
+.game-item .drag-handle {
+    color: var(--text-dim);
+    font-size: 16px;
+    cursor: grab;
+    padding: 0 2px;
+    transition: color 0.15s;
+}
+
+.game-item:hover .drag-handle {
+    color: var(--accent);
+}
+
+.game-item .drag-handle:active {
+    cursor: grabbing;
+}
+
+.game-item input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+}
+
+.game-item .info {
+    flex: 1;
+    min-width: 0;
+}
+
+.game-item .name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.game-item .desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: "Consolas", "Courier New", monospace;
+    background: var(--bg-light);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-top: 3px;
+    display: inline-block;
+}
+
+.game-item .status {
+    font-size: 12px;
+    color: var(--text-dim);
+    min-width: 48px;
+    text-align: right;
+}
+
+.game-item.drag-over {
+    border-top: 3px solid var(--accent);
+}
+
+/* Log panel */
+.log-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 14px;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    background: var(--bg-card);
+    margin: 0 10px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.log-line {
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.log-time {
+    color: var(--text-dim);
+}
+
+.log-INFO {
+    color: var(--text);
+}
+
+.log-SUCCESS {
+    color: var(--green);
+}
+
+.log-WARNING {
+    color: var(--yellow);
+}
+
+.log-ERROR {
+    color: var(--red);
+}
+
+/* Config tab */
+#tab-config {
+    flex-direction: row;
+}
+
+.config-left {
+    width: 200px;
+    min-width: 160px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+}
+
+.config-left .list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 6px 6px;
+}
+
+.config-left .list-item {
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.config-left .list-item:hover {
+    background: var(--bg-selected);
+}
+
+.config-left .list-item.active {
+    background: var(--accent);
+    color: #ffffff;
+}
+
+.config-left .btn-row {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+}
+
+.btn-add {
+    flex: 1;
+    padding: 6px;
+    border: none;
+    border-radius: 4px;
+    background: var(--accent);
+    color: #ffffff;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.btn-delete {
+    flex: 1;
+    padding: 6px;
+    border: none;
+    border-radius: 4px;
+    background: var(--red);
+    color: #ffffff;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.config-right {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+/* Form */
+.form-section {
+    margin-bottom: 16px;
+}
+
+.form-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+
+.form-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.form-row label {
+    width: 120px;
+    font-size: 13px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+
+.form-row input[type="text"],
+.form-row input[type="number"] {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-light);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+}
+
+.form-row input:focus {
+    border-color: var(--accent);
+}
+
+.form-row input[type="checkbox"] {
+    accent-color: var(--accent);
+}
+
+.form-row .file-input {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+
+.form-row .file-input input {
+    flex: 1;
+}
+
+.btn-browse {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-card);
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.btn-save {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    background: var(--accent);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-reset {
+    padding: 8px 20px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+/* Settings tab */
+#tab-settings {
+    flex-direction: column;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.settings-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.settings-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 12px;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    gap: 12px;
+}
+
+.settings-row label {
+    font-size: 13px;
+    color: var(--text);
+}
+
+.settings-row input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+}
+
+.settings-row select {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-light);
+    color: var(--text);
+    font-size: 13px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-dim);
+}

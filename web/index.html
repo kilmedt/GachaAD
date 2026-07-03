@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GachaAD</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" data-tab="run">执行</div>
+        <div class="tab" data-tab="config">配置</div>
+        <div class="tab" data-tab="settings">设置</div>
+    </div>
+
+    <!-- Execute Tab -->
+    <div id="tab-run" class="tab-content active">
+        <div class="run-left">
+            <div class="section-header">
+                <span>游戏列表</span>
+                <div class="actions">
+                    <button class="btn-sm" onclick="selectAll()">全选</button>
+                    <button class="btn-sm" onclick="invertSelection()">反选</button>
+                </div>
+            </div>
+            <div id="game-list" class="game-list"></div>
+        </div>
+        <div class="run-right">
+            <div class="section-header">
+                <span>执行日志</span>
+                <div class="actions">
+                    <button class="btn-sm" onclick="clearLog()">清空</button>
+                    <button class="btn-sm" onclick="openLogDir()">打开日志目录</button>
+                </div>
+            </div>
+            <div id="log-area" class="log-area"></div>
+        </div>
+    </div>
+
+    <!-- Config Tab -->
+    <div id="tab-config" class="tab-content">
+        <div class="config-left">
+            <div class="section-header"><span>游戏列表</span></div>
+            <div class="btn-row" style="padding: 0 6px 6px;">
+                <button class="btn-add" onclick="addPair()">+ 添加</button>
+                <button class="btn-delete" onclick="deletePair()">- 删除</button>
+            </div>
+            <div id="config-list" class="list"></div>
+        </div>
+        <div class="config-right">
+            <div class="form-section">
+                <h3>基本信息</h3>
+                <div class="form-row">
+                    <label>游戏名称</label>
+                    <input type="text" id="f-name" oninput="onNameChange()">
+                </div>
+                <div class="form-row">
+                    <label>游戏路径</label>
+                    <div class="file-input">
+                        <input type="text" id="f-game-exe">
+                        <button class="btn-browse" onclick="browseFile('f-game-exe')">...</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>自动启动游戏</label>
+                    <input type="checkbox" id="f-game-auto">
+                </div>
+            </div>
+            <div class="form-section">
+                <h3>自动化工具</h3>
+                <div class="form-row">
+                    <label>工具路径</label>
+                    <div class="file-input">
+                        <input type="text" id="f-tool-exe">
+                        <button class="btn-browse" onclick="browseFile('f-tool-exe')">...</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>工作目录</label>
+                    <div class="file-input">
+                        <input type="text" id="f-tool-dir">
+                        <button class="btn-browse" onclick="browseDir('f-tool-dir')">...</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>CLI参数</label>
+                    <input type="text" id="f-tool-args">
+                </div>
+                <div class="form-row">
+                    <label>等待退出</label>
+                    <input type="checkbox" id="f-tool-wait">
+                </div>
+                <div class="form-row">
+                    <label>超时(秒)</label>
+                    <input type="number" id="f-tool-timeout" value="1800">
+                </div>
+                <div class="form-row">
+                    <label>进程名称</label>
+                    <input type="text" id="f-tool-process">
+                </div>
+                <div class="form-row">
+                    <label>启动器路径</label>
+                    <div class="file-input">
+                        <input type="text" id="f-launcher-exe">
+                        <button class="btn-browse" onclick="browseFile('f-launcher-exe')">...</button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn-save" onclick="saveConfig()">保存配置</button>
+                <button class="btn-reset" onclick="loadForm()">重置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="tab-settings" class="tab-content">
+        <div class="settings-section">
+            <h3>主题设置</h3>
+            <div class="settings-row">
+                <input type="radio" name="theme" id="theme-dark" value="dark" onchange="setTheme('dark')">
+                <label for="theme-dark">深色模式</label>
+            </div>
+            <div class="settings-row">
+                <input type="radio" name="theme" id="theme-light" value="light" onchange="setTheme('light')">
+                <label for="theme-light">浅色模式</label>
+            </div>
+        </div>
+        <div class="settings-section">
+            <h3>自动执行</h3>
+            <div class="settings-row">
+                <input type="checkbox" id="s-auto-start">
+                <label for="s-auto-start">开机自启动</label>
+            </div>
+            <div class="settings-row">
+                <input type="checkbox" id="s-auto-execute">
+                <label for="s-auto-execute">启动后自动执行任务</label>
+            </div>
+        </div>
+        <div class="settings-section">
+            <h3>日志设置</h3>
+            <div class="settings-row">
+                <label>日志级别:</label>
+                <select id="s-log-level">
+                    <option value="DEBUG">DEBUG</option>
+                    <option value="INFO" selected>INFO</option>
+                    <option value="WARNING">WARNING</option>
+                    <option value="ERROR">ERROR</option>
+                </select>
+            </div>
+        </div>
+        <div style="margin-top: 8px;">
+            <button class="btn-save" onclick="saveSettings()">保存设置</button>
+        </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+        <button id="btn-start" class="btn btn-start" onclick="startExecution()">&#9654; 开始执行</button>
+        <button id="btn-stop" class="btn btn-stop" onclick="stopExecution()" disabled>&#9632; 停止</button>
+        <span id="status-text" class="status-text"></span>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Direct init call as fallback
+        setTimeout(function() {
+            if (typeof init === 'function') {
+                init();
+            }
+        }, 500);
+    </script>
+</body>
+</html>

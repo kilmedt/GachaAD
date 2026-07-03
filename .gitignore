@@ -1,0 +1,13 @@
+__pycache__/
+build/
+dist/
+*.pyc
+*.pyo
+logs/
+*.log
+test_*.py
+test_*.spec
+test_*.png
+debug_config.py
+VISION_README.md
+scripts/
