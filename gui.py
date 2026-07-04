@@ -96,21 +96,14 @@ class API:
     def start(self, selected_json):
         if self.is_running:
             return
-        selected = json.loads(selected_json)
-        name_to_pair = {p["name"]: p for p in self.pairs}
-        pairs = []
-        js_indices = []
-        for item in selected:
-            name = item["name"]
-            if name in name_to_pair:
-                pairs.append(name_to_pair[name])
-                js_indices.append(item["idx"])
+        indices = json.loads(selected_json)
+        pairs = [self.pairs[i] for i in indices if i < len(self.pairs)]
         if not pairs:
             return
         self.is_running = True
         self.stop_event.clear()
         self.log_queue = queue.Queue()
-        threading.Thread(target=self._run_worker, args=(pairs, js_indices), daemon=True).start()
+        threading.Thread(target=self._run_worker, args=(pairs, indices), daemon=True).start()
 
     def stop(self):
         self.stop_event.set()
