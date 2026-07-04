@@ -335,9 +335,10 @@ function loadSettings(appConfig) {
 
 // ========== Execution ==========
 async function startExecution() {
+    // Iterate pairs in display order, skip unselected — guarantees UI order
     const selected = [];
-    selectedIndices.forEach(i => {
-        if (i < pairs.length) selected.push(i);
+    pairs.forEach((pair, i) => {
+        if (selectedIndices.has(i)) selected.push({name: pair.name, uiIdx: i});
     });
     if (selected.length === 0) {
         alert('请至少选择一个游戏');
@@ -349,22 +350,25 @@ async function startExecution() {
     document.getElementById('status-text').textContent = '运行中...';
     document.getElementById('status-text').style.color = 'var(--accent)';
 
-    selectedIndices.forEach(i => setStatus(i, '等待', ''));
+    selected.forEach(s => setStatus(s.uiIdx, '等待', ''));
     clearLog();
     appendLog(`开始执行 ${selected.length} 组游戏`, 'INFO');
 
-    await api('start', JSON.stringify(selected));
     startPolling();
+    api('start', JSON.stringify(selected));
 }
 
 async function stopExecution() {
-    await api('stop');
     isRunning = false;
     document.getElementById('btn-start').disabled = false;
     document.getElementById('btn-stop').disabled = true;
     document.getElementById('status-text').textContent = '已停止';
     document.getElementById('status-text').style.color = 'var(--yellow)';
     stopPolling();
+    appendLog('用户停止执行', 'WARNING');
+    // Reset all game statuses
+    pairs.forEach((_, i) => setStatus(i, '已停止', 'var(--yellow)'));
+    api('stop');
 }
 
 function startPolling() {

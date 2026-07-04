@@ -96,31 +96,58 @@ class API:
     def start(self, selected_json):
         if self.is_running:
             return
-        indices = json.loads(selected_json)
-        pairs = [self.pairs[i] for i in indices if i < len(self.pairs)]
+        selected = json.loads(selected_json)
+        name_to_pair = {p["name"]: p for p in self.pairs}
+        pairs = []
+        ui_indices = []
+        for item in selected:
+            name = item["name"]
+            if name in name_to_pair:
+                pairs.append(name_to_pair[name])
+                ui_indices.append(item["uiIdx"])
         if not pairs:
             return
         self.is_running = True
         self.stop_event.clear()
         self.log_queue = queue.Queue()
-        threading.Thread(target=self._run_worker, args=(pairs, indices), daemon=True).start()
+        threading.Thread(target=self._run_worker, args=(pairs, ui_indices), daemon=True).start()
 
     def stop(self):
         self.stop_event.set()
         if self.orchestrator:
             self.orchestrator.pm.stop_all()
 
+    def _push(self, js_code):
+        try:
+            if self.window:
+                self.window.evaluate_js(js_code)
+        except Exception:
+            pass
+
     def _run_worker(self, pairs, indices):
         try:
+            self._push("appendLog('后台线程启动', 'INFO')")
             from orchestrator import Orchestrator, ProcessManager
             from logger import setup_logger
             from vision import GameClicker
             from task_manager import TaskManager
             import logging
+            self._push("appendLog('模块加载完成', 'INFO')")
 
             log = logging.getLogger("gacha_ad")
             log.handlers.clear()
             setup_logger(log_queue=self.log_queue)
+
+            # Add handler that pushes logs directly to JS via evaluate_js
+            push_handler = logging.StreamHandler()
+            push_handler.setLevel(logging.INFO)
+            push_handler.setFormatter(logging.Formatter("%(message)s"))
+            _orig_emit = push_handler.emit
+            def _push_emit(record):
+                msg = push_handler.format(record)
+                self._push(f"appendLog({json.dumps(msg)}, 'INFO')")
+            push_handler.emit = _push_emit
+            log.addHandler(push_handler)
 
             orch = Orchestrator.__new__(Orchestrator)
             orch.config = self.config
@@ -148,6 +175,7 @@ class API:
                     return
                 idx = indices[i] if i < len(indices) else i
                 self.log_queue.put(("status", (idx, "运行中", "#2563eb")))
+                self._push(f"setStatus({idx}, '运行中', '#2563eb')")
                 orch._run_pair_with_retry(pair)
                 if self.stop_event.is_set():
                     self.log_queue.put(("done", {"message": "已停止", "error": False}))
@@ -156,10 +184,13 @@ class API:
                 color = "#16a34a" if task and task.state.value == "completed" else "#dc2626"
                 text = "完成" if task and task.state.value == "completed" else "失败"
                 self.log_queue.put(("status", (idx, text, color)))
+                self._push(f"setStatus({idx}, '{text}', '{color}')")
             self.log_queue.put(("done", {"message": "执行完成", "error": False}))
+            self._push("isRunning=false;document.getElementById('btn-start').disabled=false;document.getElementById('btn-stop').disabled=true;document.getElementById('status-text').textContent='执行完成';document.getElementById('status-text').style.color='var(--green)';stopPolling();")
         except Exception as e:
             self.log_queue.put(("log", (f"{type(e).__name__}: {e}", "ERROR")))
             self.log_queue.put(("done", {"message": f"出错: {e}", "error": True}))
+            self._push(f"appendLog('{type(e).__name__}: {e}', 'ERROR');isRunning=false;document.getElementById('btn-start').disabled=false;document.getElementById('btn-stop').disabled=true;stopPolling();")
 
     def poll(self):
         logs, statuses, done = [], [], None
