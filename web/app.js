@@ -337,7 +337,7 @@ function loadSettings(appConfig) {
 async function startExecution() {
     const selected = [];
     selectedIndices.forEach(i => {
-        if (i < pairs.length) selected.push(i);
+        if (i < pairs.length) selected.push({name: pairs[i].name, idx: i});
     });
     if (selected.length === 0) {
         alert('请至少选择一个游戏');

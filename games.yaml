@@ -13,10 +13,44 @@ settings:
 app:
   auto_start: false
   auto_execute: false
-  theme: light
+  theme: dark
   minimize_to_tray: true
   log_level: INFO
 pairs:
+- name: 绝区零
+  game:
+    executable: D:/ElectronicGames/ZenlessZoneZero Game/ZenlessZoneZero.exe
+    auto_start: false
+    working_dir: D:/ElectronicGames/ZenlessZoneZero Game
+    wait_after_launch: 30
+  tool:
+    executable: E:/ElectronicGame/ZZZOneDragon/OneDragon-Launcher.exe
+    working_dir: E:/ElectronicGame/ZZZOneDragon
+    cli_args: -o -c
+    wait_for_exit: true
+    timeout: 1800
+    process_name: ''
+    wait_after_launch: 10
+    completion_timeout: 600
+  launcher:
+    executable: E:/ElectronicGame/miHoYo Launcher/launcher.exe
+- name: 异环
+  game:
+    executable: E:/ElectronicGame/Yihuan/Neverness To Everness/Client/WindowsNoEditor/HT/Binaries/Win64/HTGame.exe
+    auto_start: false
+    working_dir: E:/ElectronicGame/Yihuan/Neverness To Everness/Client/WindowsNoEditor/HT/Binaries/Win64
+    wait_after_launch: 30
+  tool:
+    executable: E:/ElectronicGame/ok-nte/ok-nte.exe
+    working_dir: E:/ElectronicGame/ok-nte
+    cli_args: -t 2 -e
+    wait_for_exit: true
+    timeout: 1800
+    process_name: ok-nte
+    wait_after_launch: 10
+    completion_timeout: 600
+  launcher:
+    executable: E:/ElectronicGame/Yihuan/Neverness To Everness/NTELauncher.exe
 - name: 鸣潮
   game:
     executable: E:/WeGameApps/rail_apps/Wuthering Waves(2002137)/Wuthering Waves.exe
@@ -35,44 +69,12 @@ pairs:
     name: ok-ww
     wait_after_launch: 10
     completion_timeout: 600
-- name: 绝区零
-  game:
-    executable: D:/ElectronicGames/ZenlessZoneZero Game/ZenlessZoneZero.exe
-    auto_start: false
-    working_dir: D:/ElectronicGames/ZenlessZoneZero Game
-    wait_after_launch: 30
-  tool:
-    executable: E:/ElectronicGame/ZZZOneDragon/OneDragon-Launcher.exe
-    working_dir: E:/ElectronicGame/ZZZOneDragon
-    cli_args: -o -c
-    wait_for_exit: true
-    timeout: 1800
-    use_gui_click: false
-    show_window: true
-    name: OneDragon
-    wait_after_launch: 10
-    completion_timeout: 600
-- name: 异环
-  game:
-    executable: E:/ElectronicGame/Yihuan/Neverness To Everness/Client/WindowsNoEditor/HT/Binaries/Win64/HTGame.exe
-    process_name: HTGame
-    auto_start: false
-    working_dir: E:/ElectronicGame/Yihuan/Neverness To Everness/Client/WindowsNoEditor/HT/Binaries/Win64
-    wait_after_launch: 30
-  tool:
-    executable: E:/ElectronicGame/ok-nte/ok-nte.exe
-    working_dir: E:/ElectronicGame/ok-nte
-    cli_args: -t 2 -e
-    wait_for_exit: true
-    timeout: 1800
-    process_name: ok-nte
-    name: ok-nte
-    wait_after_launch: 10
-    completion_timeout: 600
 - name: 尘白禁区
   game:
     executable: E:/Snow/data/game/Game/Binaries/Win64/Game.exe
     auto_start: true
+    working_dir: E:/Snow/data/game/Game/Binaries/Win64
+    wait_after_launch: 30
   tool:
     executable: ''
     working_dir: ''
@@ -80,5 +82,7 @@ pairs:
     wait_for_exit: true
     timeout: 1800
     process_name: ''
+    wait_after_launch: 10
+    completion_timeout: 600
   launcher:
     executable: E:/Snow/snow_launcher.exe
