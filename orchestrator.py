@@ -585,11 +585,6 @@ class Orchestrator:
                 else:
                     consecutive_dead = 0
 
-                if elapsed > completion_timeout:
-                    logger.warning(f"   ⏰ 等待超时 ({completion_timeout}s)")
-                    task.add_step("完成检测", False, "超时")
-                    return False
-
                 time.sleep(2)
 
             # ===== 步骤5: 清理 =====

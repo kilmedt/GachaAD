@@ -320,6 +320,24 @@ body {
     text-align: right;
 }
 
+.game-item .auto-close {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 1px 0;
+    margin-top: 2px;
+}
+
+.game-item .auto-close input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
 .game-item.drag-over {
     border-top: 3px solid var(--accent);
 }

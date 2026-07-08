@@ -103,7 +103,16 @@ class API:
         for item in selected:
             name = item["name"]
             if name in name_to_pair:
-                pairs.append(name_to_pair[name])
+                pair = dict(name_to_pair[name])  # copy to avoid mutating config
+                tool = dict(pair.get("tool", {}))
+                cli = tool.get("cli_args", "")
+                # Strip existing -e, then add back based on autoClose toggle
+                cli_clean = cli.replace("-e", "").strip()
+                if item.get("autoClose"):
+                    cli_clean = (cli_clean + " -e").strip()
+                tool["cli_args"] = cli_clean
+                pair["tool"] = tool
+                pairs.append(pair)
                 ui_indices.append(item["uiIdx"])
         if not pairs:
             return

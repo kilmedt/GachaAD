@@ -3,6 +3,7 @@ let pairs = [];
 let config = {};
 let editingIndex = null;
 let selectedIndices = new Set();
+let autoCloseFlags = {}; // {index: true/false} per-game auto-close toggle
 let isRunning = false;
 let pollTimer = null;
 let dragFromIndex = -1;
@@ -52,6 +53,7 @@ function renderGameList() {
         const cli = pair.tool ? (pair.tool.cli_args || '') : '';
         const desc = (toolExe + ' ' + cli).trim();
         const isSelected = selectedIndices.has(i);
+        const isAutoClose = autoCloseFlags[i] !== undefined ? autoCloseFlags[i] : (pair.tool ? pair.tool.cli_args.includes('-e') : false);
 
         const item = document.createElement('div');
         item.className = 'game-item' + (isSelected ? ' selected' : '');
@@ -63,6 +65,10 @@ function renderGameList() {
             <div class="info">
                 <div class="name">${escHtml(pair.name)}</div>
                 ${desc ? `<span class="desc">${escHtml(desc)}</span>` : ''}
+                <label class="auto-close" onclick="event.stopPropagation()" title="完成后自动关闭">
+                    <input type="checkbox" ${isAutoClose ? 'checked' : ''} onchange="toggleAutoClose(${i}, this.checked)">
+                    <span>自动关闭</span>
+                </label>
             </div>
             <span class="status" id="status-${i}">等待</span>
         `;
@@ -138,6 +144,10 @@ function toggleSelect(index, checked) {
     if (checked) selectedIndices.add(index);
     else selectedIndices.delete(index);
     renderGameList();
+}
+
+function toggleAutoClose(index, checked) {
+    autoCloseFlags[index] = checked;
 }
 
 function selectAll() {
@@ -338,7 +348,10 @@ async function startExecution() {
     // Iterate pairs in display order, skip unselected — guarantees UI order
     const selected = [];
     pairs.forEach((pair, i) => {
-        if (selectedIndices.has(i)) selected.push({name: pair.name, uiIdx: i});
+        if (selectedIndices.has(i)) {
+            const autoClose = autoCloseFlags[i] !== undefined ? autoCloseFlags[i] : (pair.tool ? pair.tool.cli_args.includes('-e') : false);
+            selected.push({name: pair.name, uiIdx: i, autoClose: autoClose});
+        }
     });
     if (selected.length === 0) {
         alert('请至少选择一个游戏');
