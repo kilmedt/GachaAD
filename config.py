@@ -2,15 +2,23 @@ import os
 import sys
 import yaml
 
+_app_dir_cache = None
+
 
 def get_app_dir() -> str:
+    global _app_dir_cache
+    if _app_dir_cache is not None:
+        return _app_dir_cache
     if getattr(sys, "frozen", False):
         exe_dir = os.path.dirname(sys.executable)
         internal_dir = os.path.join(exe_dir, "_internal")
         if os.path.exists(internal_dir):
-            return internal_dir
-        return exe_dir
-    return os.path.dirname(os.path.abspath(__file__))
+            _app_dir_cache = internal_dir
+        else:
+            _app_dir_cache = exe_dir
+    else:
+        _app_dir_cache = os.path.dirname(os.path.abspath(__file__))
+    return _app_dir_cache
 
 
 def load_config(config_path: str = "games.yaml") -> dict:

@@ -15,6 +15,7 @@ class Vision:
         self.confidence = confidence
         self.screenshot_region = screenshot_region
         self.stop_event = None
+        self._template_cache = {}
 
     def set_stop_event(self, event):
         self.stop_event = event
@@ -25,7 +26,8 @@ class Vision:
     def screenshot(self) -> np.ndarray:
         try:
             img = ImageGrab.grab(bbox=self.screenshot_region)
-            return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+            arr = np.array(img)
+            return arr[:, :, ::-1].copy()
         except Exception as e:
             logger.error(f"截图失败: {e}")
             return None
@@ -33,12 +35,15 @@ class Vision:
     def find_image(self, template_path: str, screen: np.ndarray = None) -> tuple:
         template_path = template_path.replace("\\", "/")
 
-        if not os.path.exists(template_path):
-            return False, 0, 0, 0
+        if template_path not in self._template_cache:
+            if not os.path.exists(template_path):
+                return False, 0, 0, 0
+            template = cv2.imread(template_path)
+            if template is None:
+                return False, 0, 0, 0
+            self._template_cache[template_path] = template
 
-        template = cv2.imread(template_path)
-        if template is None:
-            return False, 0, 0, 0
+        template = self._template_cache[template_path]
 
         if screen is None:
             screen = self.screenshot()

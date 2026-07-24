@@ -1,10 +1,12 @@
 """自动设置工具以管理员身份运行，绕过UAC"""
 import os
-import subprocess
 import ctypes
+import winreg
 from logger import setup_logger
 
 logger = setup_logger()
+
+_REG_KEY = r"Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers"
 
 
 def is_admin() -> bool:
@@ -19,27 +21,23 @@ def set_run_as_admin(exe_path: str) -> bool:
     if not os.path.exists(exe_path):
         return False
 
-    # 使用注册表设置RunAsAdmin
-    # 这会让Windows记住这个程序需要管理员权限
-    # 之后启动时会自动提权，不再弹UAC
-    exe_name = os.path.basename(exe_path)
-
-    # 检查是否已设置
-    check_cmd = f'reg query "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers" /v "{exe_path}" 2>nul'
-    result = subprocess.run(check_cmd, shell=True, capture_output=True, text=True)
-
-    if "RUNASADMIN" in result.stdout.upper():
-        return True  # 已经设置了
-
-    # 设置RunAsAdmin
-    set_cmd = f'reg add "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers" /v "{exe_path}" /t REG_SZ /d "RUNASADMIN" /f'
-    result = subprocess.run(set_cmd, shell=True, capture_output=True, text=True)
-
-    if result.returncode == 0:
-        logger.info(f"✅ 已设置管理员运行: {exe_name}")
+    try:
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, _REG_KEY, 0, winreg.KEY_ALL_ACCESS
+        )
+        try:
+            val, _ = winreg.QueryValueEx(key, exe_path)
+            if "RUNASADMIN" in val.upper():
+                winreg.CloseKey(key)
+                return True
+        except FileNotFoundError:
+            pass
+        winreg.SetValueEx(key, exe_path, 0, winreg.REG_SZ, "RUNASADMIN")
+        winreg.CloseKey(key)
+        logger.info(f"✅ 已设置管理员运行: {os.path.basename(exe_path)}")
         return True
-    else:
-        logger.warning(f"⚠️ 设置管理员运行失败: {result.stderr}")
+    except Exception as e:
+        logger.warning(f"⚠️ 设置管理员运行失败: {e}")
         return False
 
 
@@ -48,9 +46,18 @@ def remove_run_as_admin(exe_path: str) -> bool:
     if not os.path.exists(exe_path):
         return False
 
-    cmd = f'reg delete "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers" /v "{exe_path}" /f'
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    return result.returncode == 0
+    try:
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, _REG_KEY, 0, winreg.KEY_ALL_ACCESS
+        )
+        try:
+            winreg.DeleteValue(key, exe_path)
+        except FileNotFoundError:
+            pass
+        winreg.CloseKey(key)
+        return True
+    except Exception:
+        return False
 
 
 def ensure_admin_for_tools(tools: list[dict]):

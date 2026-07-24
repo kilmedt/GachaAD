@@ -127,11 +127,8 @@ class API:
             self.orchestrator.pm.stop_all()
 
     def _push(self, js_code):
-        try:
-            if self.window:
-                self.window.evaluate_js(js_code)
-        except Exception:
-            pass
+        """线程安全地推送 JS 代码，由 poll() 在主线程执行"""
+        self.log_queue.put(("js", js_code))
 
     def _run_worker(self, pairs, indices):
         try:
@@ -146,17 +143,6 @@ class API:
             log = logging.getLogger("gacha_ad")
             log.handlers.clear()
             setup_logger(log_queue=self.log_queue)
-
-            # Add handler that pushes logs directly to JS via evaluate_js
-            push_handler = logging.StreamHandler()
-            push_handler.setLevel(logging.INFO)
-            push_handler.setFormatter(logging.Formatter("%(message)s"))
-            _orig_emit = push_handler.emit
-            def _push_emit(record):
-                msg = push_handler.format(record)
-                self._push(f"appendLog({json.dumps(msg)}, 'INFO')")
-            push_handler.emit = _push_emit
-            log.addHandler(push_handler)
 
             orch = Orchestrator.__new__(Orchestrator)
             orch.config = self.config
@@ -184,7 +170,6 @@ class API:
                     return
                 idx = indices[i] if i < len(indices) else i
                 self.log_queue.put(("status", (idx, "运行中", "#2563eb")))
-                self._push(f"setStatus({idx}, '运行中', '#2563eb')")
                 orch._run_pair_with_retry(pair)
                 if self.stop_event.is_set():
                     self.log_queue.put(("done", {"message": "已停止", "error": False}))
@@ -193,16 +178,13 @@ class API:
                 color = "#16a34a" if task and task.state.value == "completed" else "#dc2626"
                 text = "完成" if task and task.state.value == "completed" else "失败"
                 self.log_queue.put(("status", (idx, text, color)))
-                self._push(f"setStatus({idx}, '{text}', '{color}')")
             self.log_queue.put(("done", {"message": "执行完成", "error": False}))
-            self._push("isRunning=false;document.getElementById('btn-start').disabled=false;document.getElementById('btn-stop').disabled=true;document.getElementById('status-text').textContent='执行完成';document.getElementById('status-text').style.color='var(--green)';stopPolling();")
         except Exception as e:
             self.log_queue.put(("log", (f"{type(e).__name__}: {e}", "ERROR")))
             self.log_queue.put(("done", {"message": f"出错: {e}", "error": True}))
-            self._push(f"appendLog('{type(e).__name__}: {e}', 'ERROR');isRunning=false;document.getElementById('btn-start').disabled=false;document.getElementById('btn-stop').disabled=true;stopPolling();")
 
     def poll(self):
-        logs, statuses, done = [], [], None
+        logs, statuses, done, js_codes = [], [], None, []
         try:
             while True:
                 msg = self.log_queue.get_nowait()
@@ -211,8 +193,15 @@ class API:
                 elif msg[0] == "done":
                     done = msg[1]
                     self.is_running = False
+                elif msg[0] == "js": js_codes.append(msg[1])
         except queue.Empty:
             pass
+        for code in js_codes:
+            try:
+                if self.window:
+                    self.window.evaluate_js(code)
+            except Exception:
+                pass
         return {"logs": logs, "statuses": statuses, "done": done,
                 "message": done.get("message") if done else None,
                 "error": done.get("error", False) if done else False}

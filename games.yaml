@@ -21,6 +21,8 @@ pairs:
   game:
     executable: E:/ElectronicGame/Yihuan/Neverness To Everness/Client/WindowsNoEditor/HT/Binaries/Win64/HTGame.exe
     auto_start: false
+    working_dir: E:/ElectronicGame/Yihuan/Neverness To Everness/Client/WindowsNoEditor/HT/Binaries/Win64
+    wait_after_launch: 30
   tool:
     executable: E:/ElectronicGame/ok-nte/ok-nte.exe
     working_dir: E:/ElectronicGame/ok-nte
@@ -28,6 +30,8 @@ pairs:
     wait_for_exit: true
     timeout: 1800
     process_name: ok-nte
+    wait_after_launch: 10
+    completion_timeout: 600
   launcher:
     executable: E:/ElectronicGame/Yihuan/Neverness To Everness/NTELauncher.exe
 - name: 绝区零
@@ -51,6 +55,8 @@ pairs:
   game:
     executable: E:/WeGameApps/rail_apps/Wuthering Waves(2002137)/Wuthering Waves.exe
     auto_start: false
+    working_dir: E:/WeGameApps/rail_apps/Wuthering Waves(2002137)
+    wait_after_launch: 30
   launcher:
     executable: C:/Program Files (x86)/WeGame/WeGame.exe
   tool:
@@ -60,6 +66,8 @@ pairs:
     wait_for_exit: true
     timeout: 1800
     process_name: ''
+    wait_after_launch: 10
+    completion_timeout: 600
 - name: 尘白禁区
   game:
     executable: E:/Snow/data/game/Game/Binaries/Win64/Game.exe

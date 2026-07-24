@@ -12,34 +12,13 @@ from elevated_runner import set_run_as_admin
 logger = setup_logger()
 
 
-def tasklist_all_pids() -> set:
-    """获取系统所有进程 PID"""
+def tasklist_snapshot() -> tuple[set, dict]:
+    """一次调用获取系统所有进程的 PID 集合 + PID→名称映射"""
     pids = set()
+    detail = {}
     try:
         output = subprocess.check_output(
-            'tasklist /FO CSV /NH', shell=True,
-            text=True, encoding='gbk', errors='ignore'
-        )
-        for line in output.strip().split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-            parts = line.split('","')
-            if len(parts) >= 2:
-                pid_str = parts[1].strip('"').strip()
-                if pid_str.isdigit():
-                    pids.add(int(pid_str))
-    except Exception:
-        pass
-    return pids
-
-
-def tasklist_get_all_detail() -> dict:
-    """获取所有进程的 PID -> {name} 映射"""
-    processes = {}
-    try:
-        output = subprocess.check_output(
-            'tasklist /FO CSV /NH', shell=True,
+            ['tasklist', '/FO', 'CSV', '/NH'],
             text=True, encoding='gbk', errors='ignore'
         )
         for line in output.strip().split('\n'):
@@ -51,101 +30,34 @@ def tasklist_get_all_detail() -> dict:
                 name = parts[0].strip('"').strip()
                 pid_str = parts[1].strip('"').strip()
                 if pid_str.isdigit():
-                    processes[int(pid_str)] = {"name": name}
+                    pid = int(pid_str)
+                    pids.add(pid)
+                    detail[pid] = {"name": name}
     except Exception:
         pass
-    return processes
+    return pids, detail
 
 
-def tasklist_check_pid_alive(pid: int) -> bool:
-    """检查指定 PID 是否存活"""
-    try:
-        cmd = f'tasklist /FI "PID eq {pid}" /FO CSV /NH'
-        output = subprocess.check_output(cmd, shell=True, text=True, encoding='gbk', errors='ignore')
-        for line in output.strip().split('\n'):
-            if str(pid) in line and '","' in line:
-                return True
-    except Exception:
-        pass
-    return False
-
-
-def tasklist_find_by_name(image_name: str) -> list[dict]:
-    """通过 tasklist 查找指定镜像名的进程"""
-    results = []
-    try:
-        cmd = f'tasklist /FI "IMAGENAME eq {image_name}" /FO CSV /NH'
-        output = subprocess.check_output(cmd, shell=True, text=True, encoding='gbk', errors='ignore')
-        for line in output.strip().split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-            parts = line.split('","')
-            if len(parts) >= 2:
-                name = parts[0].strip('"').strip()
-                pid_str = parts[1].strip('"').strip()
-                if pid_str.isdigit() and name.lower() == image_name.lower():
-                    results.append({"name": name, "pid": int(pid_str)})
-    except Exception:
-        pass
-    return results
-
-
-def is_process_running(process_name: str) -> list[dict]:
-    return tasklist_find_by_name(process_name)
-
-
-def wmic_find_process(name_pattern: str) -> list[dict]:
-    """通过 wmic 模糊搜索进程名（处理中文显示名等 IMAGENAME 无法匹配的情况）"""
-    results = []
-    try:
-        cmd = f'wmic process where "Name like \'%{name_pattern}%\'" get ProcessId,Name /format:list'
-        output = subprocess.check_output(cmd, shell=True, text=True, encoding='gbk', errors='ignore')
-        pid = None
-        pname = None
-        for line in output.strip().split('\n'):
-            line = line.strip()
-            if line.startswith('ProcessId='):
-                val = line.split('=', 1)[1].strip()
-                if val.isdigit():
-                    pid = val
-            elif line.startswith('Name='):
-                pname = line.split('=', 1)[1].strip()
-            elif line == '' and pid and pname:
-                results.append({"name": pname, "pid": pid})
-                pid = None
-                pname = None
-        if pid and pname:
-            results.append({"name": pname, "pid": pid})
-    except Exception:
-        pass
-    return results
-
-
-def find_running_process(exe_path: str, process_name: str = None) -> dict:
-    """通过路径或进程名查找运行中的进程"""
+def find_process_in_snapshot(detail: dict, exe_path: str, process_name: str = None) -> dict:
+    """在快照数据中查找进程（不发起额外 subprocess），返回 {"name": ..., "pid": ...} 或 None"""
     if process_name:
-        running = is_process_running(process_name + ".exe")
-        if running:
-            return running[0]
-        running = is_process_running(process_name)
-        if running:
-            return running[0]
-        # tasklist IMAGENAME 找不到时，用 wmic 模糊搜索（处理中文显示名）
-        running = wmic_find_process(process_name)
-        if running:
-            return running[0]
+        for pid, info in detail.items():
+            pname = info.get("name", "")
+            pname_lower = pname.lower()
+            if pname_lower == (process_name + ".exe").lower() or pname_lower == process_name.lower():
+                return {"name": pname, "pid": pid}
+        # 模糊匹配中文显示名
+        for pid, info in detail.items():
+            pname = info.get("name", "")
+            if process_name.lower() in pname.lower():
+                return {"name": pname, "pid": pid}
 
     exe_name = os.path.basename(exe_path)
-    running = is_process_running(exe_name)
-    if running:
-        return running[0]
-
     name_without_ext = os.path.splitext(exe_name)[0]
-    running = is_process_running(name_without_ext + ".exe")
-    if running:
-        return running[0]
-
+    for pid, info in detail.items():
+        pname = info.get("name", "").lower()
+        if exe_name.lower() in pname or (name_without_ext + ".exe").lower() in pname:
+            return {"name": info.get("name", ""), "pid": pid}
     return None
 
 
@@ -161,7 +73,7 @@ class ProcessManager:
 
         try:
             # ===== 快照1: 记录启动前所有进程 PID =====
-            before_pids = tasklist_all_pids()
+            before_pids, _ = tasklist_snapshot()
             logger.info(f"   📸 启动前进程数: {len(before_pids)}")
 
             # 启动工具
@@ -181,8 +93,7 @@ class ProcessManager:
             time.sleep(3)
 
             # ===== 快照2: 记录启动后所有进程 =====
-            after_pids_map = tasklist_get_all_detail()
-            after_pids = set(after_pids_map.keys())
+            after_pids, after_detail = tasklist_snapshot()
             logger.info(f"   📸 启动后进程数: {len(after_pids)}")
 
             # 差分: 找出所有新增的进程
@@ -192,24 +103,20 @@ class ProcessManager:
             # 记录新增进程的详情
             child_pids = set()
             for pid in sorted(new_pids):
-                info = after_pids_map.get(pid, {})
+                info = after_detail.get(pid, {})
                 pname = info.get("name", "unknown")
                 logger.info(f"      新增 PID={pid} 名称={pname}")
                 child_pids.add(pid)
 
             # 同时查找工具 exe 本身
-            exe_name = os.path.basename(executable)
-            name_without_ext = os.path.splitext(exe_name)[0]
-            tool_pid = 0
-            for pid in new_pids:
-                pname = after_pids_map.get(pid, {}).get("name", "").lower()
-                if name_without_ext.lower() in pname or exe_name.lower() in pname:
-                    tool_pid = pid
-                    break
+            tool_info = find_process_in_snapshot(after_detail, executable)
+            tool_pid = tool_info["pid"] if tool_info and "pid" in tool_info else 0
             if tool_pid == 0:
-                for pid in after_pids:
-                    pname = after_pids_map.get(pid, {}).get("name", "").lower()
-                    if name_without_ext.lower() in pname:
+                for pid in new_pids:
+                    pname = after_detail.get(pid, {}).get("name", "").lower()
+                    exe_name = os.path.basename(executable).lower()
+                    name_without_ext = os.path.splitext(os.path.basename(executable))[0].lower()
+                    if name_without_ext in pname or exe_name in pname:
                         tool_pid = pid
                         break
 
@@ -300,14 +207,15 @@ class Orchestrator:
             if tool_exe and os.path.exists(tool_exe):
                 set_run_as_admin(tool_exe)
 
-    def _are_tool_pids_alive(self) -> bool:
+    def _are_tool_pids_alive(self, snapshot_pids: set = None) -> bool:
         """检查工具子进程是否还存活，返回并更新存活的 PID 集合"""
         if not self._tool_child_pids:
             return False
-        alive = set()
-        for pid in self._tool_child_pids:
-            if tasklist_check_pid_alive(pid):
-                alive.add(pid)
+        if snapshot_pids is not None:
+            alive = self._tool_child_pids & snapshot_pids
+        else:
+            current_pids, _ = tasklist_snapshot()
+            alive = self._tool_child_pids & current_pids
         dead_count = len(self._tool_child_pids) - len(alive)
         if dead_count > 0 and alive:
             logger.debug(f"   子进程已退出 {dead_count} 个, 剩余 {len(alive)} 个")
@@ -410,7 +318,8 @@ class Orchestrator:
                 task.add_step("检测工具", False, "未配置路径")
                 return False
 
-            tool_running_info = find_running_process(tool_exe, tool_config.get("process_name"))
+            snap_pids, snap_detail = tasklist_snapshot()
+            tool_running_info = find_process_in_snapshot(snap_detail, tool_exe, tool_config.get("process_name"))
             if tool_running_info:
                 logger.info(f"   ✅ 工具已在运行 PID={tool_running_info['pid']}")
                 task.add_step("检测工具", True, f"已运行 PID={tool_running_info['pid']}")
@@ -482,13 +391,15 @@ class Orchestrator:
 
             game_was_running_before = False
             if game_exe:
-                game_was_running_before = find_running_process(game_exe, game_process_name) is not None
+                snap_pids, snap_detail = tasklist_snapshot()
+                game_was_running_before = find_process_in_snapshot(snap_detail, game_exe, game_process_name) is not None
 
             for check_count in range(50):
                 if self._is_stopped():
                     return False
                 if game_exe:
-                    game_info = find_running_process(game_exe, game_process_name)
+                    snap_pids, snap_detail = tasklist_snapshot()
+                    game_info = find_process_in_snapshot(snap_detail, game_exe, game_process_name)
                     if game_info:
                         logger.info(f"   ✅ 游戏已启动 PID={game_info['pid']}")
                         game_running = True
@@ -528,16 +439,16 @@ class Orchestrator:
 
                 elapsed = time.time() - start_time
 
+                # ===== 一次快照供下面所有检查使用 =====
+                current_pids, current_detail = tasklist_snapshot()
+
                 # ===== 首次发现主进程后锁定，不再扫描新进程 =====
-                # ===== 只找 pythonw.exe / python.exe，找到即锁定 =====
                 if not found_main_process:
-                    current_pids_map = tasklist_get_all_detail()
-                    current_pids = set(current_pids_map.keys())
                     new_since_baseline = current_pids - self._baseline_pids
 
                     for pid in new_since_baseline:
                         if pid not in self._tool_child_pids:
-                            pname = current_pids_map.get(pid, {}).get("name", "").lower()
+                            pname = current_detail.get(pid, {}).get("name", "").lower()
                             if 'python' in pname:
                                 self._tool_child_pids.add(pid)
                                 logger.info(f"   📦 发现 Python 进程 PID={pid} 名称={pname}")
@@ -546,9 +457,10 @@ class Orchestrator:
                         found_main_process = True
                         logger.info(f"   🔒 锁定 {len(self._tool_child_pids)} 个 Python 进程，不再扫描")
 
-                # ===== 检查已知进程是否存活 =====
-                tool_exe_alive = find_running_process(tool_exe, tool_config.get("process_name")) is not None
-                child_alive = self._are_tool_pids_alive()
+                # ===== 用同一份快照检查工具进程和子进程 =====
+                tool_info = find_process_in_snapshot(current_detail, tool_exe, tool_config.get("process_name"))
+                tool_exe_alive = tool_info is not None
+                child_alive = self._are_tool_pids_alive(current_pids)
                 tool_alive = tool_exe_alive or child_alive
 
                 if first_check:
@@ -610,7 +522,7 @@ class Orchestrator:
             for pid in self._tool_child_pids:
                 try:
                     logger.info(f"   🔴 关闭工具子进程 PID={pid}")
-                    subprocess.run(f'taskkill /PID {pid} /F', shell=True, capture_output=True)
+                    subprocess.run(['taskkill', '/PID', str(pid), '/F'], capture_output=True)
                 except Exception as e:
                     logger.warning(f"   ⚠️ 关闭子进程失败: {e}")
             self._tool_child_pids.clear()

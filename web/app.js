@@ -7,6 +7,15 @@ let autoCloseFlags = {}; // {index: true/false} per-game auto-close toggle
 let isRunning = false;
 let pollTimer = null;
 let dragFromIndex = -1;
+let _dragIndicator = null;
+
+function getDragIndicator() {
+    if (!_dragIndicator) {
+        _dragIndicator = document.createElement('div');
+        _dragIndicator.className = 'drag-indicator';
+    }
+    return _dragIndicator;
+}
 
 // ========== API Helper ==========
 async function api(method, ...args) {
@@ -92,19 +101,17 @@ function renderGameList() {
         item.addEventListener('dragend', () => {
             item.classList.remove('dragging');
             dragFromIndex = -1;
-            container.querySelectorAll('.game-item').forEach(el => el.classList.remove('drag-over'));
-            const indicator = container.querySelector('.drag-indicator');
-            if (indicator) indicator.remove();
+            if (_dragIndicator && _dragIndicator.parentNode) {
+                _dragIndicator.parentNode.removeChild(_dragIndicator);
+            }
         });
 
         item.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            container.querySelectorAll('.drag-indicator').forEach(el => el.remove());
+            const indicator = getDragIndicator();
             const rect = item.getBoundingClientRect();
             const midY = rect.top + rect.height / 2;
-            const indicator = document.createElement('div');
-            indicator.className = 'drag-indicator';
             if (e.clientY < midY) {
                 item.parentNode.insertBefore(indicator, item);
             } else {
@@ -122,14 +129,14 @@ function renderGameList() {
         item.addEventListener('drop', (e) => {
             e.preventDefault();
             const fromIndex = dragFromIndex;
-            const indicators = container.querySelectorAll('.drag-indicator');
+            const indicator = _dragIndicator;
             let toIndex = i;
-            if (indicators.length > 0) {
+            if (indicator && indicator.parentNode) {
                 const rect = item.getBoundingClientRect();
                 const midY = rect.top + rect.height / 2;
                 toIndex = e.clientY < midY ? i : i + 1;
+                indicator.parentNode.removeChild(indicator);
             }
-            indicators.forEach(el => el.remove());
             if (fromIndex >= 0 && fromIndex !== toIndex && fromIndex !== toIndex - 1) {
                 reorderPairs(fromIndex, toIndex > fromIndex ? toIndex - 1 : toIndex);
             }
@@ -193,6 +200,8 @@ function setStatus(index, text, color) {
 }
 
 // ========== Log ==========
+const MAX_LOG_LINES = 500;
+
 function appendLog(message, level) {
     const area = document.getElementById('log-area');
     const now = new Date();
@@ -201,6 +210,9 @@ function appendLog(message, level) {
     line.className = 'log-line';
     line.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${level || 'INFO'}">${escHtml(message)}</span>`;
     area.appendChild(line);
+    while (area.children.length > MAX_LOG_LINES) {
+        area.removeChild(area.firstChild);
+    }
     area.scrollTop = area.scrollHeight;
 }
 
@@ -272,12 +284,16 @@ function saveFormToPair() {
     }
 }
 
+let _nameChangeTimer = null;
 function onNameChange() {
-    if (editingIndex !== null && editingIndex < pairs.length) {
-        pairs[editingIndex].name = document.getElementById('f-name').value;
-        renderConfigList();
-        renderGameList();
-    }
+    if (_nameChangeTimer) clearTimeout(_nameChangeTimer);
+    _nameChangeTimer = setTimeout(() => {
+        if (editingIndex !== null && editingIndex < pairs.length) {
+            pairs[editingIndex].name = document.getElementById('f-name').value;
+            renderConfigList();
+            renderGameList();
+        }
+    }, 200);
 }
 
 async function addPair() {
@@ -419,9 +435,8 @@ async function pollStatus() {
 
 // ========== Utility ==========
 function escHtml(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // ========== Init ==========
