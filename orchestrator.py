@@ -19,7 +19,8 @@ def tasklist_snapshot() -> tuple[set, dict]:
     try:
         output = subprocess.check_output(
             ['tasklist', '/FO', 'CSV', '/NH'],
-            text=True, encoding='gbk', errors='ignore'
+            text=True, encoding='gbk', errors='ignore',
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
         for line in output.strip().split('\n'):
             line = line.strip()
@@ -522,7 +523,7 @@ class Orchestrator:
             for pid in self._tool_child_pids:
                 try:
                     logger.info(f"   🔴 关闭工具子进程 PID={pid}")
-                    subprocess.run(['taskkill', '/PID', str(pid), '/F'], capture_output=True)
+                    subprocess.run(['taskkill', '/PID', str(pid), '/F'], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
                 except Exception as e:
                     logger.warning(f"   ⚠️ 关闭子进程失败: {e}")
             self._tool_child_pids.clear()
